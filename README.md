@@ -1,123 +1,117 @@
 # GamePulse 🎮
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Render](https://img.shields.io/badge/Render-Deployment-black?logo=render&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Python 3.14](https://img.shields.io/badge/Python_3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Render](https://img.shields.io/badge/Render-000000?style=for-the-badge&logo=render&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-[🇬🇧 English](#english) | [🇹🇷 Türkçe](#türkçe)
-
----
-
-<a name="english"></a>
-## 🇬🇧 English
-
-### 🎯 Purpose
-**GamePulse** is a modern, real-time game deal tracking and hardware analysis microservice. It fetches the best game deals from multiple stores (Steam, Epic, GOG, etc.) using the CheapShark API and provides an estimated FPS and performance tier analysis based on the user's GPU model. The application features a sleek, dark-themed glassmorphism UI built with Tailwind CSS.
-
-### 🏗️ System Architecture
-1. **Frontend (UI)**: Jinja2 Templates + Tailwind CSS (served directly by FastAPI). Features a debounced autocomplete dropdown for game names and real-time fetch rendering.
-2. **Backend (API)**: FastAPI (Python). Handles routing, hardware performance calculations (regex-based rule engine), and external API requests via `httpx`.
-3. **Caching Layer**: Built-in SQLite Cache (`gamepulse_cache.db`) with a 1-hour TTL to prevent external API rate-limiting and dramatically enhance response times.
-4. **Database**: PostgreSQL (Production) / SQLite (Local) via SQLAlchemy. Logs the most recent user searches to display them dynamically on the UI.
-
-### 🛠️ Tech Stack
-- **Backend Framework**: FastAPI, Uvicorn, Jinja2
-- **Data & ORM**: SQLAlchemy, PostgreSQL (`psycopg2-binary`), SQLite
-- **Frontend**: HTML5, Tailwind CSS (CDN), Vanilla JS (Fetch API)
-- **DevOps**: Docker (Multi-stage build), Render (PaaS)
-
-### 🚀 Local Setup
-
-1. **Clone the repository & create a virtual environment:**
-```powershell
-git clone https://github.com/gorlan61/gamepulse.git
-cd gamepulse
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-
-2. **Install dependencies:**
-```powershell
-pip install -r requirements.txt
-```
-
-3. **Set up environment variables:**
-```powershell
-Copy-Item .env.example .env
-```
-
-4. **Run the server:**
-```powershell
-python -m uvicorn app.main:app --reload
-```
-Navigate to `http://127.0.0.1:8000/` to view the UI, or `http://127.0.0.1:8000/docs` for the Swagger API documentation.
-
-### ☁️ Render Deployment
-GamePulse is fully configured for PaaS deployment on Render using Docker.
-1. Create a new **Web Service** on Render and connect your GitHub repository.
-2. Select **Docker** as the runtime environment.
-3. Add a **PostgreSQL** database on Render and copy its internal connection string.
-4. Set the following Environment Variables in the Web Service:
-   - `APP_ENV` = `production`
-   - `DATABASE_URL` = `your_render_postgresql_internal_url`
-5. Deploy! Render will build the image from the `Dockerfile` and spin up the service.
+**Canlı Ortam:** [https://gamepulse-1q3y.onrender.com](https://gamepulse-1q3y.onrender.com)
 
 ---
 
-<a name="türkçe"></a>
-## 🇹🇷 Türkçe
+## 📝 Proje Özeti & Çözülen Problemler
+GamePulse, oyuncuların en uygun oyun fırsatlarını bulmasını ve kendi donanımlarıyla (GPU) bu oyunları hangi grafik ayarlarında kaç FPS ile oynayabileceklerini anında görmelerini sağlayan **gerçek zamanlı ve asenkron bir mikro servistir**.
 
-### 🎯 Proje Amacı
-**GamePulse**, gerçek zamanlı oyun fiyat indirimlerini takip eden ve kullanıcıların donanımlarına (GPU) göre tahmini oyun performansı (FPS) sunan modern bir mikro servistir. CheapShark API'sini kullanarak Steam, Epic ve GOG gibi mağazalardaki fırsatları listeler. Tailwind CSS ile tasarlanmış, "glassmorphism" efektlerine sahip koyu temalı çok şık bir web arayüzü barındırır.
+Sistem, birden çok mağazadaki oyun fırsatlarını CheapShark API'si üzerinden asenkron olarak (`httpx` ile) çeker. Kendi içerisinde barındırdığı **Regex Tabanlı Performans Motoru** ile kullanıcının girdiği ekran kartı modelini analiz ederek (Örn: RTX 4060, RX 580) tahmini FPS ve kalite katmanı (Tier) üretir. Tüm bunları modern, koyu temalı ve *glassmorphism* tasarımlı premium bir arayüzle oyunculara sunar.
 
-### 🏗️ Sistem Mimarisi
-1. **Frontend (Önyüz)**: FastAPI tarafından sunulan Jinja2 Şablonları ve Tailwind CSS. Oyun ararken API'yi yormamak için "debounce" mantığıyla çalışan otomatik tamamlama (autocomplete) özelliği içerir.
-2. **Backend (Arkayüz)**: FastAPI (Python). İstek yönlendirmelerini, kural tabanlı donanım performansı hesaplamalarını ve `httpx` üzerinden harici API iletişimini yönetir.
-3. **Önbellek (Cache) Katmanı**: Harici API limitlerine takılmamak ve performansı uçurmak için 1 saat ömürlü (TTL) yerel SQLite Cache (`gamepulse_cache.db`) altyapısı kullanır.
-4. **Veritabanı**: SQLAlchemy destekli PostgreSQL (Canlı ortam) ve SQLite (Yerel ortam). Kullanıcıların yaptığı son aramaları günlüğe kaydeder ve ana sayfada dinamik olarak listeler.
+---
 
-### 🛠️ Teknoloji Yığını
-- **Backend Framework**: FastAPI, Uvicorn, Jinja2
-- **Veri & ORM**: SQLAlchemy, PostgreSQL (`psycopg2-binary`), SQLite
-- **Frontend**: HTML5, Tailwind CSS (CDN), Vanilla JS (Fetch API)
-- **DevOps**: Docker (Multi-stage build), Render (PaaS)
+## 🏗️ Teknik Mimari ve Akış (Architecture)
 
-### 🚀 Lokalde Kurulum
+Sistemin esnek yapısı ve yüksek performanslı veri akışı aşağıdaki şekilde tasarlanmıştır:
 
-1. **Projeyi klonlayın ve sanal ortamı aktif edin:**
-```powershell
-git clone https://github.com/gorlan61/gamepulse.git
-cd gamepulse
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+```mermaid
+graph TD
+    A[İstemci / Tarayıcı] -->|1. Arama İsteği| B(SlowAPI Rate Limiter)
+    B -.->|Limit Aşıldı| Z[429 Too Many Requests]
+    B -->|2. Limit Aşılmadı| C{SQLite Cache Hit/Miss}
+    C -->|3. Cache Hit| D[Önbellekten Şimşek Hızında Yanıt]
+    C -->|4. Cache Miss| E[Asenkron HTTPX İsteği]
+    E -->|5. Dış API Verisi| F[Regex Donanım Analiz Motoru]
+    F -->|6. Sonuçları Birleştir| G[(PostgreSQL Search History)]
+    G -->|7. Yeni Kaydı Ekle| H[Jinja2 + Tailwind CSS UI Render]
+    D --> H
 ```
 
-2. **Bağımlılıkları yükleyin:**
-```powershell
+**Mimari Kararlar ve Zorlukların Aşılması:**
+- **Rate Limiting**: `SlowAPI` katmanı, kötü niyetli botların ve spam isteklerin dış API kotalarını tüketmesini engeller. Limit aşımları UI tarafında kibar bildirimlere dönüştürülür.
+- **Bulut Uyumlu Önbellekleme**: İşletim sistemine duyarlı (`os.name == "nt"`) akıllı SQLite Cache katmanı kurgulandı. Render gibi salt-okunur (read-only) container ortamlarında `unable to open database file` hatası almamak için sistem Linux ortamında otomatik olarak geçici ve yazılabilir olan `/tmp/` dizinine geçer.
+- **Python 3.14 Uyumsuzluğu**: Python 3.14 (pre-release) ortamındaki `__firstlineno__` çakışması `SQLAlchemy>=2.0.35` sürümüne esnetilerek çözüldü. Eksik wheel dosyaları yüzünden patlayan veritabanı bağlantısı ise modern `psycopg` (v3) saf Python modülü ile değiştirilerek garanti altına alındı.
+
+---
+
+## ⚙️ Proje Özellikleri (Features)
+- ⚡ **Asenkron FastAPI:** Uvicorn tabanlı, Pydantic ile güçlü veri doğrulama (Validation).
+- 🚀 **Performans Odaklı Cache:** Yerleşik SQLite ile 1 saatlik (TTL) önbellekleme mekanizması.
+- 🐘 **Modern Veritabanı:** En yeni `psycopg` (v3) sürücüsü ile yüksek performanslı PostgreSQL entegrasyonu ve son aramaların anlık listelendiği Veritabanı Paneli.
+- 🧠 **Akıllı Arama (Debounced Autocomplete):** Arayüzde oyun yazılırken API'yi yormayan, 300ms gecikmeli hızlı oyun öneri motoru.
+- 🛡️ **Gelişmiş Güvenlik (SlowAPI):** Dakikada 10 (Analiz) ve 30 (Arama) istek sınırlarıyla donatılmış endpoint koruması.
+- 🎨 **Premium UI:** Tailwind CSS ile sıfırdan tasarlanmış z-index sorunlarından arındırılmış tam duyarlı (responsive) UI.
+
+---
+
+## 💻 Yerel Kurulum ve Çalıştırma (Local Setup)
+
+Projeyi yerelde (lokalde) çalıştırmak için aşağıdaki komutları sırasıyla uygulayın:
+
+```bash
+# 1. Repoyu Klonlayın
+git clone https://github.com/gorlan61/gamepulse.git
+cd gamepulse
+
+# 2. Sanal Ortam (Virtual Environment) Oluşturun ve Aktif Edin
+python -m venv venv
+
+# Windows PowerShell için:
+.\venv\Scripts\Activate.ps1
+# Linux / MacOS için:
+source venv/bin/activate
+
+# 3. Bağımlılıkları Yükleyin (Uyumlu SQLAlchemy ve Psycopg3 dahil)
 pip install -r requirements.txt
 ```
 
-3. **Ortam değişkenlerini ayarlayın:**
-```powershell
-Copy-Item .env.example .env
+**Ortam Değişkenleri (.env) Ayarı:**  
+Proje kök dizininde `.env` dosyasını yapılandırın:
+```env
+APP_ENV=development
+# SQLite kullanmak isterseniz:
+DATABASE_URL=sqlite:///./gamepulse.db
+# PostgreSQL kullanmak isterseniz:
+# DATABASE_URL=postgresql+psycopg://kullanici:sifre@localhost:5432/gamepulse
 ```
 
-4. **Sunucuyu başlatın:**
-```powershell
+**Sunucuyu Ayağa Kaldırın:**
+```bash
 python -m uvicorn app.main:app --reload
 ```
-Arayüzü görmek için tarayıcıda `http://127.0.0.1:8000/` adresine, Swagger API dökümantasyonu için ise `http://127.0.0.1:8000/docs` adresine gidebilirsiniz.
+Tarayıcınızda `http://127.0.0.1:8000` adresine giderek muhteşem arayüze erişebilir, veya API dökümantasyonu için `http://127.0.0.1:8000/docs` adresini ziyaret edebilirsiniz.
 
-### ☁️ Render Dağıtımı (Deployment)
-GamePulse, Docker kullanılarak Render üzerinde çalışacak şekilde (Production-Ready) yapılandırılmıştır.
-1. Render'da yeni bir **Web Service** oluşturun ve GitHub reponuzu bağlayın.
-2. Çalışma ortamı (Runtime) olarak **Docker**'ı seçin.
-3. Render üzerinde yeni bir **PostgreSQL** veritabanı oluşturun ve dâhili bağlantı adresini kopyalayın.
-4. Web Service ayarlarına şu Ortam Değişkenlerini (Environment Variables) ekleyin:
-   - `APP_ENV` = `production`
-   - `DATABASE_URL` = `render_postgresql_dahili_adresi`
-5. Deploy butonuna basın! Render, `Dockerfile` üzerinden imajı inşa edip projeyi saniyeler içinde canlıya alacaktır.
+---
+
+## 🐳 Docker Kullanımı (Dockerization)
+
+GamePulse, production ortamları için hazır bir multi-stage `Dockerfile` barındırır. İhtiyaç durumunda projeyi konteynerize etmek için:
+
+```bash
+# Docker imajını inşa edin
+docker build -t gamepulse .
+
+# Konteyneri 8000 portundan dışarıya açarak .env bağlamasıyla çalıştırın
+docker run -p 8000:8000 --env-file .env gamepulse
+```
+
+---
+
+## 🔮 Gelecek Yol Haritası (Roadmap)
+- [x] CheapShark API Entegrasyonu ve Asenkron Mimari
+- [x] SQLite Cache Katmanı ve Render Uyumlu `/tmp/` Düzeltmesi
+- [x] PostgreSQL Veritabanı ve Son Aramalar Paneli
+- [x] SlowAPI ile API Rate Limiting (Hız Sınırlandırma)
+- [x] Python 3.14 Uyumluluğu (SQLAlchemy 2.0.49 & Pure Psycopg v3)
+- [x] Dinamik Autocomplete (Otomatik Tamamlama) ve Glassmorphism UI
+- [ ] JWT Tabanlı Kullanıcı Kimlik Doğrulama (Authentication)
+- [ ] GitHub Actions ile Otomatik CI/CD Pipeline
+- [ ] Pytest ile Birim ve Entegrasyon Testlerinin Yazılması
