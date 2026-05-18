@@ -5,7 +5,7 @@ ileride yeni router'lar eklemek kolaylaşır.
 """
 import logging
 import httpx
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Query, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.config import APP_VERSION, APP_ENV, CHEAPSHARK_BASE_URL
 from app.schemas import StatusResponse, GameDealResponse, GameAnalysisResponse
@@ -14,6 +14,7 @@ from app.analyzer import analyze_gpu
 from app.database import get_db
 from app.models import SearchHistory
 from app.cache import get_cache, set_cache
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ router = APIRouter()
 
 # ── 0. /search-suggestions ─────────────────────────────────────────────────────
 @router.get("/search-suggestions", summary="Oyun adı için otomatik tamamlama önerileri", tags=["UI Helpers"])
-async def get_search_suggestions(q: str = Query(..., min_length=2)):
+@limiter.limit("30/minute")
+async def get_search_suggestions(request: Request, q: str = Query(..., min_length=2)):
     """
     Kullanıcı arayüzünde oyun adı yazılırken çalışır.
     CheapShark API'sine gidip eşleşen ilk 5 oyunun adını liste olarak döner.
@@ -105,7 +107,9 @@ async def get_game_deal(game_name: str) -> GameDealResponse:
     ),
     tags=["Analyze"],
 )
+@limiter.limit("10/minute")
 async def analyze_game(
+    request: Request,
     game_name: str,
     gpu_model: str = Query(
         ...,

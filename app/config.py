@@ -14,11 +14,13 @@ APP_ENV = os.getenv("APP_ENV", "development")
 CHEAPSHARK_BASE_URL = "https://www.cheapshark.com/api/1.0"
 
 # ── Veritabanı Yapılandırması ──────────────────────────────────────────────────
-# Render veya diğer PaaS servisleri veritabanı URL'sini postgres:// ile başlayarak verebilir.
-# SQLAlchemy 1.4/2.0+ ise postgresql:// şemasını zorunlu tutar. Bu yüzden otomatik dönüşüm yapıyoruz.
+# Render veya diğer PaaS servisleri veritabanı URL'sini postgres:// veya postgresql:// ile verebilir.
+# SQLAlchemy ile psycopg 3 kullanacağımız için postgresql+psycopg:// formatına dönüştürüyoruz.
 raw_db_url = os.getenv("DATABASE_URL", "sqlite:///./gamepulse.db")
 if raw_db_url.startswith("postgres://"):
-    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif raw_db_url.startswith("postgresql://"):
+    DATABASE_URL = raw_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 else:
     DATABASE_URL = raw_db_url
 

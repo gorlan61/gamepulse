@@ -23,6 +23,9 @@ from app.routes import router
 from app.config import APP_VERSION, APP_ENV
 from app.database import get_db
 from app.models import SearchHistory
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 
 # ── Logging yapılandırması ─────────────────────────────────────────────────────
 logging.basicConfig(
@@ -81,6 +84,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Rate Limiter Yapılandırması
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Router'ı uygulamaya bağla (Tüm endpoint'ler buradan gelir)
 app.include_router(router)

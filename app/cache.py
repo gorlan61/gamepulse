@@ -10,7 +10,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "gamepulse_cache.db")
+# Linux (Render vb.) için /tmp klasörü her zaman yazılabilirdir.
+# Windows için yerel dizinde oluştur.
+_default_path = "gamepulse_cache.db" if os.name == "nt" else "/tmp/gamepulse_cache.db"
+CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", _default_path)
 
 
 def init_cache():

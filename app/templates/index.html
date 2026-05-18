@@ -253,6 +253,9 @@
                 const response = await fetch(url);
                 const data = await response.json();
 
+                if(response.status === 429) {
+                    throw new Error("Çok fazla istek attınız, lütfen biraz bekleyin.");
+                }
                 if(!response.ok) {
                     throw new Error(data.detail || "Analiz sırasında bir hata oluştu.");
                 }
@@ -331,6 +334,12 @@
             debounceTimer = setTimeout(async () => {
                 try {
                     const res = await fetch(`/search-suggestions?q=${encodeURIComponent(query)}`);
+                    
+                    if (res.status === 429) {
+                        suggestionsBox.innerHTML = '<li class="px-4 py-3 text-red-400 text-sm">Çok fazla istek attınız, lütfen bekleyin.</li>';
+                        suggestionsBox.classList.remove('hidden');
+                        return;
+                    }
                     if (!res.ok) return;
                     
                     const suggestions = await res.json();
