@@ -50,8 +50,6 @@ USER appuser
 # ── Üretim başlangıç komutu ───────────────────────────────────────────────────
 # --host 0.0.0.0 → container dışından erişim için zorunlu (127.0.0.1 ÇALIŞMAZ)
 # --workers 1    → Tek process; ileride Gunicorn + birden fazla worker eklenebilir
-# --no-access-log kullanmıyoruz — loglar DevOps için değerli
-CMD ["python", "-m", "uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1"]
+# Render gibi platformlar portu dinamik olarak $PORT değişkeni ile atar.
+# Bu yüzden exec form ([...]) yerine shell form kullanıyoruz.
+CMD python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
