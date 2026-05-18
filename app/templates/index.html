@@ -59,13 +59,18 @@
         </header>
 
         <!-- Arama Formu -->
-        <div class="glass-panel rounded-2xl p-6 md:p-8 mb-10 shadow-2xl shadow-black/50 fade-in" style="animation-delay: 0.1s;">
+        <div class="glass-panel relative z-50 rounded-2xl p-6 md:p-8 mb-10 shadow-2xl shadow-black/50 fade-in" style="animation-delay: 0.1s;">
             <form id="analyzeForm" class="grid grid-cols-1 md:grid-cols-12 gap-6">
                 <!-- Oyun Adı -->
-                <div class="md:col-span-5">
+                <div class="md:col-span-5 relative">
                     <label class="block text-sm font-medium text-slate-400 mb-2" for="game_name">Oyun Adı</label>
-                    <input type="text" id="game_name" required placeholder="Örn: Cyberpunk 2077" 
+                    <input type="text" id="game_name" required autocomplete="off" placeholder="Örn: Cyberpunk 2077" 
                            class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-600">
+                    
+                    <!-- Autocomplete Dropdown -->
+                    <ul id="suggestionsBox" class="absolute z-50 w-full mt-2 bg-slate-900/95 backdrop-blur-xl border border-sky-500/30 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)] hidden overflow-hidden divide-y divide-slate-800/60">
+                        <!-- Öneriler JS ile buraya eklenecek -->
+                    </ul>
                 </div>
                 
                 <!-- GPU Modeli -->
@@ -304,6 +309,62 @@
                 btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 loader.classList.add('hidden');
                 loader.classList.remove('flex');
+            }
+        });
+
+        // ── Autocomplete / Debounce Mantığı ──────────────────────────────────
+        const gameInput = document.getElementById('game_name');
+        const suggestionsBox = document.getElementById('suggestionsBox');
+        let debounceTimer;
+
+        gameInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            if (query.length < 2) {
+                suggestionsBox.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/search-suggestions?q=${encodeURIComponent(query)}`);
+                    if (!res.ok) return;
+                    
+                    const suggestions = await res.json();
+                    
+                    if (suggestions.length === 0) {
+                        suggestionsBox.classList.add('hidden');
+                        return;
+                    }
+
+                    // Menüyü oluştur
+                    suggestionsBox.innerHTML = suggestions.map((game, index) => `
+                        <li class="px-4 py-3 cursor-pointer text-slate-300 hover:bg-sky-500/20 hover:text-white hover:pl-5 transition-all"
+                            onclick="selectSuggestion('${game.replace(/'/g, "\\'")}')">
+                            ${game}
+                        </li>
+                    `).join('');
+                    
+                    suggestionsBox.classList.remove('hidden');
+                } catch (err) {
+                    console.error("Öneri çekilemedi:", err);
+                }
+            }, 300); // 300ms Debounce
+        });
+
+        // Tıklama ile seçme fonksiyonu (global scope)
+        window.selectSuggestion = function(gameName) {
+            gameInput.value = gameName;
+            suggestionsBox.classList.add('hidden');
+        };
+
+        // Input dışına tıklayınca menüyü gizle
+        document.addEventListener('click', (e) => {
+            if (!gameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                suggestionsBox.classList.add('hidden');
             }
         });
     </script>

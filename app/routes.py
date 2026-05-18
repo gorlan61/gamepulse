@@ -4,9 +4,10 @@ FastAPI Router kullanmak, endpoint'leri modüler tutar;
 ileride yeni router'lar eklemek kolaylaşır.
 """
 import logging
-from fastapi import APIRouter, Query, Depends
+import httpx
+from fastapi import APIRouter, Query, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.config import APP_VERSION, APP_ENV
+from app.config import APP_VERSION, APP_ENV, CHEAPSHARK_BASE_URL
 from app.schemas import StatusResponse, GameDealResponse, GameAnalysisResponse
 from app.services import fetch_game_deal
 from app.analyzer import analyze_gpu
@@ -18,6 +19,34 @@ logger = logging.getLogger(__name__)
 
 # ── Router oluştur ─────────────────────────────────────────────────────────────
 router = APIRouter()
+
+# ── 0. /search-suggestions ─────────────────────────────────────────────────────
+@router.get("/search-suggestions", summary="Oyun adı için otomatik tamamlama önerileri", tags=["UI Helpers"])
+async def get_search_suggestions(q: str = Query(..., min_length=2)):
+    """
+    Kullanıcı arayüzünde oyun adı yazılırken çalışır.
+    CheapShark API'sine gidip eşleşen ilk 5 oyunun adını liste olarak döner.
+    """
+    if not q:
+        return []
+    
+    headers = {"User-Agent": "GamePulse/0.1.0 (contact@gamepulse.dev)"}
+    params = {"title": q, "limit": 5}
+    
+    try:
+        async with httpx.AsyncClient(timeout=5, headers=headers) as client:
+            response = await client.get(f"{CHEAPSHARK_BASE_URL}/games", params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            # API'den dönen listeden sadece oyun isimlerini çıkart
+            suggestions = [game.get("external") for game in data if "external" in game]
+            # Yinelenenleri kaldırıp (eğer varsa) ilk 5'i dön
+            return list(dict.fromkeys(suggestions))[:5]
+    except Exception as exc:
+        logger.error("Failed to fetch suggestions for '%s': %s", q, exc)
+        return []
+
 
 
 # ── 1. /status ─────────────────────────────────────────────────────────────────
