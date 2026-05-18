@@ -10,7 +10,7 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 
-# Windows: stdout'u UTF-8'e zorla (CP1254 gibi dar codec'lerde unicode hatasını önler)
+# Windows: stdout'u UTF-8'e zorla
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -19,20 +19,17 @@ from fastapi.responses import JSONResponse
 from app.routes import router
 from app.config import APP_VERSION, APP_ENV
 
-
 # ── Logging yapılandırması ─────────────────────────────────────────────────────
-# Format: [LEVEL] tarih saat | modül | mesaj
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)-8s %(asctime)s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    stream=sys.stdout,         # Docker log collector için stdout'a yaz
+    stream=sys.stdout,
 )
 logger = logging.getLogger("gamepulse")
 
 
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
-# FastAPI'nin modern lifecycle yönetimi; eski @app.on_event yerine kullanılır.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # >>> STARTUP
@@ -52,6 +49,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.critical("Database initialization failed: %s", exc)
 
+    # ── Önbelleği (Cache) Başlat ───────────────────────────────────────────────
+    logger.info("Initializing Cache Store...")
+    try:
+        from app.cache import init_cache
+        init_cache()
+    except Exception as exc:
+        logger.error("Failed to initialize cache: %s", exc)
+
     yield
 
     # >>> SHUTDOWN
@@ -68,17 +73,15 @@ app = FastAPI(
     ),
     version=APP_VERSION,
     lifespan=lifespan,
-    # Swagger UI'da daha temiz bir görünüm için
     docs_url="/docs",
     redoc_url="/redoc",
 )
 
-# Router'ı uygulamaya bağla
+# Router'ı uygulamaya bağla (Tüm endpoint'ler buradan gelir)
 app.include_router(router)
 
 
 # ── Global hata yakalayıcı ─────────────────────────────────────────────────────
-# Beklenmeyen tüm Exception'ları yakalar; kullanıcıya 500 döner ama sunucu düşmez.
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     logger.error("Unhandled exception on %s: %s", request.url, exc, exc_info=True)

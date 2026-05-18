@@ -22,8 +22,7 @@ class SearchHistory(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False,
-        description="Sorgunun yapıldığı anlık zaman damgası"
+        nullable=False
     )
 
     def __repr__(self) -> str:

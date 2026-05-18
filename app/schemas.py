@@ -103,3 +103,9 @@ class GameAnalysisResponse(BaseModel):
     performance: PerformanceReport = Field(
         description="GPU analizinden üretilen performans raporu"
     )
+
+    # ── Önbellek Durumu ───────────────────────────────────────────────────────
+    is_cached: bool = Field(
+        default=False,
+        description="True ise bu sonuç dış API çağrısı olmadan önbellekten (cache) getirilmiştir"
+    )

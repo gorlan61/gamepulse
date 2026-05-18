@@ -12,11 +12,11 @@ from app.services import fetch_game_deal
 from app.analyzer import analyze_gpu
 from app.database import get_db
 from app.models import SearchHistory
+from app.cache import get_cache, set_cache
 
 logger = logging.getLogger(__name__)
 
 # ── Router oluştur ─────────────────────────────────────────────────────────────
-# prefix eklemek isteğe bağlı; şimdilik root level tutuyoruz
 router = APIRouter()
 
 
@@ -35,7 +35,6 @@ router = APIRouter()
 async def get_status() -> StatusResponse:
     """
     Basit bir sağlık kontrolü endpoint'i.
-    Production'da bu endpoint genelde /health veya /healthz olarak adlandırılır.
     """
     logger.info("Status endpoint called")
     return StatusResponse(
@@ -53,17 +52,13 @@ async def get_status() -> StatusResponse:
     summary="Oyun fiyat ve indirim bilgisini getirir",
     description=(
         "Verilen oyun adı için CheapShark API'sine istek atar ve "
-        "mevcut en iyi fiyat + indirim bilgisini döndürür. "
-        "API erişilemez olduğunda uygulama çökmez; "
-        "`is_fallback: true` ile sahte veri döner."
+        "mevcut en iyi fiyat + indirim bilgisini döndürür."
     ),
     tags=["Games"],
 )
 async def get_game_deal(game_name: str) -> GameDealResponse:
     """
     Path parametresi olarak oyun adı alır.
-    Örnek: GET /game/Cyberpunk%202077
-    Boşluklu isimler için URL encoding kullanın (%20 ya da +).
     """
     logger.info("Game deal request received for: '%s'", game_name)
     return await fetch_game_deal(game_name)
@@ -95,22 +90,33 @@ async def analyze_game(
     """
     Path param: oyun adı (URL-encoded boşluk desteklenir).
     Query param: gpu_model — kullanıcının ekran kartı.
-
-    Örnek istek:
-        GET /analyze/Cyberpunk%202077?gpu_model=RTX+4060
     """
+    # Key normalizasyonu
+    normalized_game = game_name.lower().strip()
+    normalized_gpu = gpu_model.lower().strip()
+    cache_key = f"analyze:{normalized_game}:{normalized_gpu}"
+
     logger.info(
-        "Analyze request — game: '%s', gpu: '%s'",
-        game_name, gpu_model
+        "Analyze request — game: '%s' (normalized: '%s'), gpu: '%s' (normalized: '%s')",
+        game_name, normalized_game, gpu_model, normalized_gpu
     )
 
-    # 1. Oyun fiyat verisini al (mevcut servis katmanını yeniden kullan)
+    # 1. Önbelleği (Cache) Kontrol Et
+    cached_data = get_cache(cache_key)
+    if cached_data:
+        logger.info("Serving response from cache for key '%s'...", cache_key)
+        cached_data["is_cached"] = True
+        return GameAnalysisResponse(**cached_data)
+
+    logger.info("Cache miss for key '%s'. Fetching new data...", cache_key)
+
+    # 2. Oyun fiyat verisini al
     deal = await fetch_game_deal(game_name)
 
-    # 2. GPU performans analizini yap (senkron kural motoru)
+    # 3. GPU performans analizini yap
     perf = analyze_gpu(gpu_model)
 
-    # 3. Arama geçmişini veritabanına kaydet (Resilience: DB hatası servisi çökertmez)
+    # 4. Arama geçmişini veritabanına kaydet (Resilience: DB hatası servisi çökertmez)
     try:
         db_history = SearchHistory(
             game_name=deal.game_name,
@@ -126,8 +132,8 @@ async def analyze_game(
         db.rollback()
         logger.error("Failed to save search history to database: %s", exc)
 
-    # 4. İki veri kaynağını birleştir ve tek yanıt olarak dön
-    return GameAnalysisResponse(
+    # 5. Birleşik yanıt objesini oluştur
+    response_obj = GameAnalysisResponse(
         game_name=deal.game_name,
         store=deal.store,
         normal_price=deal.normal_price,
@@ -137,4 +143,10 @@ async def analyze_game(
         is_fallback=deal.is_fallback,
         source=deal.source,
         performance=perf,
+        is_cached=False,
     )
+
+    # 6. Yanıtı 1 saatliğine önbelleğe (Cache) kaydet
+    set_cache(cache_key, response_obj.model_dump(), ttl_seconds=3600)
+
+    return response_obj
