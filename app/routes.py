@@ -4,11 +4,14 @@ FastAPI Router kullanmak, endpoint'leri modüler tutar;
 ileride yeni router'lar eklemek kolaylaşır.
 """
 import logging
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from sqlalchemy.orm import Session
 from app.config import APP_VERSION, APP_ENV
 from app.schemas import StatusResponse, GameDealResponse, GameAnalysisResponse
 from app.services import fetch_game_deal
 from app.analyzer import analyze_gpu
+from app.database import get_db
+from app.models import SearchHistory
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +90,7 @@ async def analyze_game(
         max_length=80,
         example="RTX 4060",
     ),
+    db: Session = Depends(get_db),
 ) -> GameAnalysisResponse:
     """
     Path param: oyun adı (URL-encoded boşluk desteklenir).
@@ -106,7 +110,23 @@ async def analyze_game(
     # 2. GPU performans analizini yap (senkron kural motoru)
     perf = analyze_gpu(gpu_model)
 
-    # 3. İki veri kaynağını birleştir ve tek yanıt olarak dön
+    # 3. Arama geçmişini veritabanına kaydet (Resilience: DB hatası servisi çökertmez)
+    try:
+        db_history = SearchHistory(
+            game_name=deal.game_name,
+            gpu_model=perf.gpu_model,
+            estimated_performance=perf.estimated_performance.value,
+            estimated_fps=perf.estimated_fps,
+        )
+        db.add(db_history)
+        db.commit()
+        db.refresh(db_history)
+        logger.info("Search history saved to database: id=%d", db_history.id)
+    except Exception as exc:
+        db.rollback()
+        logger.error("Failed to save search history to database: %s", exc)
+
+    # 4. İki veri kaynağını birleştir ve tek yanıt olarak dön
     return GameAnalysisResponse(
         game_name=deal.game_name,
         store=deal.store,

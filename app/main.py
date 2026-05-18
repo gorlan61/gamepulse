@@ -41,7 +41,19 @@ async def lifespan(app: FastAPI):
     logger.info("  Docs  -> http://127.0.0.1:8000/docs")
     logger.info("  ReDoc -> http://127.0.0.1:8000/redoc")
     logger.info("=" * 50)
+
+    # ── Veritabanı Tablolarını Oluştur ──────────────────────────────────────────
+    logger.info("Initializing database tables...")
+    try:
+        from app.database import Base, engine
+        import app.models  # Modelleri Base'e kaydetmek için zorunlu
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables initialized successfully.")
+    except Exception as exc:
+        logger.critical("Database initialization failed: %s", exc)
+
     yield
+
     # >>> SHUTDOWN
     logger.info("GamePulse shutting down. Goodbye!")
 
