@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GamePulse | Performans & Fiyat Analizi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glow-button {
+            transition: all 0.3s ease;
+        }
+        .glow-button:hover {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+            transform: translateY(-2px);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Loader Spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #38bdf8;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen relative overflow-x-hidden selection:bg-sky-500/30">
+    <!-- Arka plan efektleri -->
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-sky-600/20 rounded-full blur-[128px] -z-10"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-[128px] -z-10"></div>
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+        <!-- Başlık -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-5xl font-bold mb-4 tracking-tight">Game<span class="gradient-text">Pulse</span></h1>
+            <p class="text-slate-400 text-lg max-w-xl mx-auto">Gerçek zamanlı oyun indirimleri ve donanımınız için tahmini FPS analizi tek bir yerde.</p>
+        </header>
+
+        <!-- Arama Formu -->
+        <div class="glass-panel rounded-2xl p-6 md:p-8 mb-10 shadow-2xl shadow-black/50 fade-in" style="animation-delay: 0.1s;">
+            <form id="analyzeForm" class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <!-- Oyun Adı -->
+                <div class="md:col-span-5">
+                    <label class="block text-sm font-medium text-slate-400 mb-2" for="game_name">Oyun Adı</label>
+                    <input type="text" id="game_name" required placeholder="Örn: Cyberpunk 2077" 
+                           class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all placeholder:text-slate-600">
+                </div>
+                
+                <!-- GPU Modeli -->
+                <div class="md:col-span-5">
+                    <label class="block text-sm font-medium text-slate-400 mb-2" for="gpu_model">Ekran Kartınız (GPU)</label>
+                    <input type="text" id="gpu_model" required placeholder="Örn: RTX 4060 veya RX 6700 XT" 
+                           class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-600">
+                </div>
+                
+                <!-- Buton -->
+                <div class="md:col-span-2 flex items-end">
+                    <button type="submit" id="submitBtn" 
+                            class="w-full glow-button bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-semibold rounded-xl px-4 py-3 flex items-center justify-center gap-2">
+                        <span>Analiz Et</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Yükleniyor Göstergesi -->
+        <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-12">
+            <div class="loader mb-4"></div>
+            <p class="text-sky-400 font-medium animate-pulse">Derin uzaydan veriler çekiliyor...</p>
+        </div>
+
+        <!-- Hata Mesajı -->
+        <div id="errorMessage" class="hidden glass-panel border-red-500/30 rounded-xl p-4 text-center text-red-400 mb-8">
+            <span id="errorText">Bir hata oluştu.</span>
+        </div>
+
+        <!-- Sonuç Bölgesi -->
+        <div id="resultsArea" class="hidden space-y-6 fade-in">
+            <!-- Rozet: Önbellek Durumu -->
+            <div id="cacheBadgeWrapper" class="flex justify-end hidden">
+                <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Önbellekten Yıldırım Hızıyla Geldi
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Fiyat Kartı -->
+                <div class="glass-panel rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="p-2.5 bg-sky-500/20 rounded-lg text-sky-400">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white">Mağaza Fırsatı</h3>
+                    </div>
+                    
+                    <div class="space-y-4 relative z-10">
+                        <div>
+                            <p class="text-sm text-slate-400">Oyun</p>
+                            <p id="res_game_name" class="text-lg font-medium text-white truncate"></p>
+                        </div>
+                        <div class="flex justify-between items-end border-b border-slate-700/50 pb-4">
+                            <div>
+                                <p class="text-sm text-slate-400">Mağaza</p>
+                                <p id="res_store" class="text-lg font-medium text-sky-400"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-slate-400">İndirim</p>
+                                <span id="res_discount" class="inline-block px-2 py-1 bg-green-500/20 text-green-400 rounded-md text-sm font-bold"></span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2">
+                            <div>
+                                <p class="text-sm text-slate-400 line-through" id="res_normal_price"></p>
+                                <p class="text-3xl font-bold text-white" id="res_sale_price"></p>
+                            </div>
+                            <a id="res_deal_url" href="#" target="_blank" class="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold rounded-xl transition-colors">
+                                Fırsata Git
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performans Kartı -->
+                <div class="glass-panel rounded-2xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="p-2.5 bg-indigo-500/20 rounded-lg text-indigo-400">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white">Donanım Analizi</h3>
+                    </div>
+                    
+                    <div class="space-y-4 relative z-10">
+                        <div>
+                            <p class="text-sm text-slate-400">Algılanan Donanım</p>
+                            <p id="res_matched_gpu" class="text-lg font-medium text-white"></p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 border-y border-slate-700/50 py-4">
+                            <div>
+                                <p class="text-sm text-slate-400 mb-1">Tahmini FPS</p>
+                                <div class="flex items-baseline gap-1">
+                                    <span id="res_fps" class="text-3xl font-bold text-indigo-400"></span>
+                                    <span class="text-sm text-slate-500">FPS</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-400 mb-1">Grafik Kalitesi</p>
+                                <span id="res_tier" class="inline-block px-3 py-1 bg-slate-800 rounded-lg text-sm font-bold tracking-wide"></span>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <p class="text-sm text-slate-400 mb-1">Analiz Notu</p>
+                            <p id="res_note" class="text-sm text-slate-300 leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const gameName = document.getElementById('game_name').value.trim();
+            const gpuModel = document.getElementById('gpu_model').value.trim();
+            
+            if(!gameName || !gpuModel) return;
+
+            // UI Reset
+            document.getElementById('resultsArea').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('cacheBadgeWrapper').classList.add('hidden');
+            
+            const btn = document.getElementById('submitBtn');
+            const loader = document.getElementById('loadingIndicator');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+
+            try {
+                // Encode URI parameters properly
+                const url = `/analyze/${encodeURIComponent(gameName)}?gpu_model=${encodeURIComponent(gpuModel)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if(!response.ok) {
+                    throw new Error(data.detail || "Analiz sırasında bir hata oluştu.");
+                }
+
+                // Fiyat Verilerini Doldur
+                document.getElementById('res_game_name').textContent = data.game_name;
+                document.getElementById('res_store').textContent = data.store;
+                document.getElementById('res_normal_price').textContent = "$" + data.normal_price;
+                document.getElementById('res_sale_price').textContent = "$" + data.sale_price;
+                
+                const discObj = document.getElementById('res_discount');
+                if(data.discount_percent > 0) {
+                    discObj.textContent = "%" + Math.round(data.discount_percent) + " İndirim";
+                    discObj.classList.remove('hidden');
+                } else {
+                    discObj.classList.add('hidden');
+                }
+                
+                document.getElementById('res_deal_url').href = data.deal_url;
+
+                // Performans Verilerini Doldur
+                const perf = data.performance;
+                document.getElementById('res_matched_gpu').textContent = perf.matched_gpu_label;
+                document.getElementById('res_fps').textContent = perf.estimated_fps;
+                
+                const tierEl = document.getElementById('res_tier');
+                tierEl.textContent = perf.estimated_performance;
+                // Tier rengini dinamik ayarla
+                tierEl.className = 'inline-block px-3 py-1 rounded-lg text-sm font-bold tracking-wide';
+                if(perf.estimated_performance === 'Ultra') tierEl.classList.add('bg-fuchsia-500/20', 'text-fuchsia-400');
+                else if(perf.estimated_performance === 'High') tierEl.classList.add('bg-emerald-500/20', 'text-emerald-400');
+                else if(perf.estimated_performance === 'Medium') tierEl.classList.add('bg-amber-500/20', 'text-amber-400');
+                else tierEl.classList.add('bg-red-500/20', 'text-red-400');
+
+                document.getElementById('res_note').textContent = perf.analysis_note;
+
+                // Cache Rozeti
+                if(data.is_cached) {
+                    document.getElementById('cacheBadgeWrapper').classList.remove('hidden');
+                }
+
+                // Animasyonlu gösterim
+                document.getElementById('resultsArea').classList.remove('hidden');
+                
+                // Animasyonu tetiklemek için reflow
+                void document.getElementById('resultsArea').offsetWidth;
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('errorText').textContent = err.message;
+                document.getElementById('errorMessage').classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+            }
+        });
+    </script>
+</body>
+</html>

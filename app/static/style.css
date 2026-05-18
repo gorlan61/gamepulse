@@ -1,0 +1,4 @@
+/* Custom GamePulse Styles (Tailwind handles most UI, this is for specifics) */
+body {
+    font-family: 'Inter', sans-serif;
+}

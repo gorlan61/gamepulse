@@ -14,8 +14,10 @@ from contextlib import asynccontextmanager
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from app.routes import router
 from app.config import APP_VERSION, APP_ENV
 
@@ -80,6 +82,20 @@ app = FastAPI(
 # Router'ı uygulamaya bağla (Tüm endpoint'ler buradan gelir)
 app.include_router(router)
 
+# ── Frontend (UI) Yapılandırması ───────────────────────────────────────────────
+# Statik dosyaları (CSS, JS, Resimler) sunmak için
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# HTML şablonları için Jinja2 yapılandırması
+templates = Jinja2Templates(directory="app/templates")
+
+@app.get("/", response_class=HTMLResponse, tags=["UI"])
+async def serve_ui(request: Request):
+    """
+    Ana sayfayı (Web Arayüzü) render eder.
+    Kullanıcı doğrudan tarayıcıdan geldiğinde çalışır.
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
 
 # ── Global hata yakalayıcı ─────────────────────────────────────────────────────
 @app.exception_handler(Exception)
