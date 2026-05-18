@@ -71,6 +71,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 |--------|-----|----------|
 | `GET` | `/status` | Sağlık kontrolü |
 | `GET` | `/game/{game_name}` | Oyun fiyat + indirim bilgisi |
+| `GET` | `/analyze/{game_name}?gpu_model=...` | Oyun fiyatı + GPU performans analizi (Yeni) |
 | `GET` | `/docs` | Swagger UI (interaktif API dökümantasyonu) |
 | `GET` | `/redoc` | ReDoc dökümantasyonu |
 
@@ -82,8 +83,11 @@ Invoke-RestMethod http://127.0.0.1:8000/status
 
 # Oyun fiyatı (boşluklu isimler için %20 kullan)
 Invoke-RestMethod "http://127.0.0.1:8000/game/Cyberpunk%202077"
-Invoke-RestMethod "http://127.0.0.1:8000/game/Witcher"
-Invoke-RestMethod "http://127.0.0.1:8000/game/GTA"
+
+# Oyun Fiyatı + Donanım/GPU Performans Analizi
+Invoke-RestMethod "http://127.0.0.1:8000/analyze/Cyberpunk%202077?gpu_model=RTX%204060"
+Invoke-RestMethod "http://127.0.0.1:8000/analyze/Witcher?gpu_model=GTX%201650"
+Invoke-RestMethod "http://127.0.0.1:8000/analyze/GTA?gpu_model=RX%20580"
 ```
 
 ### Örnek Yanıtlar
@@ -109,6 +113,28 @@ Invoke-RestMethod "http://127.0.0.1:8000/game/GTA"
   "deal_url": "https://www.cheapshark.com/redirect?dealID=...",
   "is_fallback": false,
   "source": "CheapShark API"
+}
+```
+
+**GET /analyze/Witcher?gpu_model=RTX%204060**
+```json
+{
+  "game_name": "The Witcher 3: Wild Hunt",
+  "store": "Steam",
+  "normal_price": "39.99",
+  "sale_price": "9.99",
+  "discount_percent": 75.02,
+  "deal_url": "https://www.cheapshark.com/redirect?dealID=...",
+  "is_fallback": false,
+  "source": "CheapShark API",
+  "performance": {
+    "gpu_model": "RTX 4060",
+    "estimated_performance": "High",
+    "estimated_fps": 105,
+    "fps_range": "80–120 FPS",
+    "matched_gpu_label": "RTX 4060",
+    "analysis_note": "Yüksek performans. Oyunu 1080p–1440p High/Ultra ayarlarında akıcı bir şekilde oynayabilirsiniz."
+  }
 }
 ```
 
@@ -206,7 +232,8 @@ docker images gamepulse
 
 | Karar | Sebep |
 |-------|-------|
-| **httpx yerine requests** | Async-native; FastAPI'nin event loop'u ile uyumlu |
+| **requests yerine httpx** | Async-native; FastAPI'nin event loop'u ile uyumlu |
+| **Hardware Rule Engine (analyzer.py)** | Kural tabanlı regex motoru, donanım eşleşmelerini ana uygulamadan soyutlar |
 | **Fallback pattern** | API bağımlılığı servisi çökertmemeli (resilience) |
 | **APIRouter** | Endpoint'leri modüler tutar, ölçeklenebilirlik sağlar |
 | **Lifespan context** | Deprecated `@on_event` yerine modern FastAPI yaklaşımı |

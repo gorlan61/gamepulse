@@ -54,10 +54,14 @@ async def fetch_game_deal(game_name: str) -> GameDealResponse:
         "sortBy": "Savings", # En yüksek indirimi üste getir (CheapShark kabul ettiği enum değeri)
     }
 
+    headers = {
+        "User-Agent": "GamePulse/0.1.0 (contact@gamepulse.dev)"
+    }
+
     try:
         # httpx.AsyncClient — async/await ile HTTP çağrısı yapar
         # timeout=10: 10 saniye içinde yanıt gelmezse TimeoutException fırlatır
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=10, headers=headers) as client:
             logger.info("Fetching deals for game: '%s'", game_name)
             response = await client.get(f"{CHEAPSHARK_BASE_URL}/deals", params=params)
 

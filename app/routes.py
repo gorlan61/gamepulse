@@ -4,10 +4,11 @@ FastAPI Router kullanmak, endpoint'leri modüler tutar;
 ileride yeni router'lar eklemek kolaylaşır.
 """
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from app.config import APP_VERSION, APP_ENV
-from app.schemas import StatusResponse, GameDealResponse
+from app.schemas import StatusResponse, GameDealResponse, GameAnalysisResponse
 from app.services import fetch_game_deal
+from app.analyzer import analyze_gpu
 
 logger = logging.getLogger(__name__)
 
@@ -63,3 +64,57 @@ async def get_game_deal(game_name: str) -> GameDealResponse:
     """
     logger.info("Game deal request received for: '%s'", game_name)
     return await fetch_game_deal(game_name)
+
+
+# ── 3. /analyze/{game_name} ────────────────────────────────────────────────────
+@router.get(
+    "/analyze/{game_name}",
+    response_model=GameAnalysisResponse,
+    summary="Oyun fiyatı + GPU performans analizi",
+    description=(
+        "Verilen oyun için fiyat bilgisini CheapShark API'sinden çeker ve "
+        "kullanıcının GPU modeline göre tahmini performans raporu oluşturur. "
+        "Sonuç; fiyat verisi ve donanım analizi (FPS, tier, öneri) içerir."
+    ),
+    tags=["Analyze"],
+)
+async def analyze_game(
+    game_name: str,
+    gpu_model: str = Query(
+        ...,
+        description="Ekran kartı model adı. Örn: RTX 4060, RX 6700 XT, GTX 1650",
+        min_length=2,
+        max_length=80,
+        example="RTX 4060",
+    ),
+) -> GameAnalysisResponse:
+    """
+    Path param: oyun adı (URL-encoded boşluk desteklenir).
+    Query param: gpu_model — kullanıcının ekran kartı.
+
+    Örnek istek:
+        GET /analyze/Cyberpunk%202077?gpu_model=RTX+4060
+    """
+    logger.info(
+        "Analyze request — game: '%s', gpu: '%s'",
+        game_name, gpu_model
+    )
+
+    # 1. Oyun fiyat verisini al (mevcut servis katmanını yeniden kullan)
+    deal = await fetch_game_deal(game_name)
+
+    # 2. GPU performans analizini yap (senkron kural motoru)
+    perf = analyze_gpu(gpu_model)
+
+    # 3. İki veri kaynağını birleştir ve tek yanıt olarak dön
+    return GameAnalysisResponse(
+        game_name=deal.game_name,
+        store=deal.store,
+        normal_price=deal.normal_price,
+        sale_price=deal.sale_price,
+        discount_percent=deal.discount_percent,
+        deal_url=deal.deal_url,
+        is_fallback=deal.is_fallback,
+        source=deal.source,
+        performance=perf,
+    )
