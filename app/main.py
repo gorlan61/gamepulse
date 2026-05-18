@@ -14,12 +14,15 @@ from contextlib import asynccontextmanager
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 from app.routes import router
 from app.config import APP_VERSION, APP_ENV
+from app.database import get_db
+from app.models import SearchHistory
 
 # ── Logging yapılandırması ─────────────────────────────────────────────────────
 logging.basicConfig(
@@ -90,12 +93,31 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 @app.get("/", response_class=HTMLResponse, tags=["UI"])
-async def serve_ui(request: Request):
+async def serve_ui(request: Request, db: Session = Depends(get_db)):
     """
     Ana sayfayı (Web Arayüzü) render eder.
     Kullanıcı doğrudan tarayıcıdan geldiğinde çalışır.
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Son 5 aramayı veritabanından çek (en yeni en üstte)
+    history_records = db.query(SearchHistory).order_by(SearchHistory.created_at.desc()).limit(5).all()
+    
+    # Zaman damgalarını daha okunabilir hale getir (örn: 18.05.2026 14:30)
+    formatted_history = []
+    for record in history_records:
+        # created_at datetime objesidir
+        formatted_date = record.created_at.strftime("%d.%m.%Y %H:%M") if record.created_at else "Bilinmiyor"
+        formatted_history.append({
+            "game_name": record.game_name,
+            "gpu_model": record.gpu_model,
+            "estimated_performance": record.estimated_performance,
+            "estimated_fps": record.estimated_fps,
+            "created_at_formatted": formatted_date
+        })
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "history_list": formatted_history
+    })
 
 # ── Global hata yakalayıcı ─────────────────────────────────────────────────────
 @app.exception_handler(Exception)
