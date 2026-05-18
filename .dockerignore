@@ -1,0 +1,38 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environment (asla imaja girmesin!) ────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Ortam & gizli dosyalar ────────────────────────────────────────────────────
+.env
+# .env.example imaja GİREBİLİR (şablon olarak), ama üretim secretları girmemeli
+
+# ── Test & geliştirme araçları ────────────────────────────────────────────────
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDE & editör dosyaları ────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Git ────────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Docker kendisi ────────────────────────────────────────────────────────────
+Dockerfile
+.dockerignore
+
+# ── Dökümantasyon (opsiyonel — üretim imajında gerek yok) ────────────────────
+README.md
